@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BM Gayrimenkul</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root{
+    --bg:#0B0B0D;
+    --panel:#16161A;
+    --panel-2:#1D1D22;
+    --border:#2B2B31;
+    --gold:#C7A05C;
+    --gold-light:#E7CD8E;
+    --gold-dim:#8A7038;
+    --text:#EDEAE2;
+    --text-dim:#A5A29A;
+    --text-muted:#6E6C66;
+    --danger:#B9583F;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Manrope', sans-serif;
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,h4{font-family:'Fraunces', serif; font-weight:500; letter-spacing:-0.01em;}
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit; cursor:pointer;}
+  .hidden{display:none !important;}
+  ::selection{background:var(--gold-dim); color:#000;}
+
+  /* ---------- Scrollbar ---------- */
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--panel-2); border-radius:6px;}
+
+  /* ---------- Nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 5%;
+    background:linear-gradient(to bottom, rgba(11,11,13,0.9), rgba(11,11,13,0));
+    transition:background 0.3s, padding 0.3s, border-color 0.3s;
+    border-bottom:1px solid transparent;
+  }
+  header.scrolled{
+    background:rgba(11,11,13,0.88);
+    backdrop-filter:blur(10px);
+    padding:14px 5%;
+    border-bottom:1px solid var(--border);
+  }
+  .logo{display:flex; flex-direction:column; line-height:1;}
+  .logo .mark{font-family:'Fraunces', serif; font-size:1.6rem; color:var(--gold-light); letter-spacing:0.04em;}
+  .logo .sub{font-size:0.62rem; letter-spacing:0.28em; color:var(--text-muted); margin-top:4px;}
+  nav.links{display:flex; gap:38px; align-items:center;}
+  nav.links a{font-size:0.9rem; color:var(--text-dim); transition:color 0.2s; position:relative;}
+  nav.links a:hover{color:var(--gold-light);}
+  nav.links a.admin-link{color:var(--text-muted); font-size:0.78rem; border:1px solid var(--border); padding:8px 16px; border-radius:2px;}
+  nav.links a.admin-link:hover{border-color:var(--gold-dim); color:var(--gold-light);}
+  .burger{display:none; flex-direction:column; gap:5px; background:none; border:none;}
+  .burger span{width:24px; height:1.5px; background:var(--text);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative; height:100vh; min-height:640px;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  #bg-canvas{position:absolute; inset:0; width:100%; height:100%; z-index:0;}
+  .hero::after{
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse at 50% 40%, rgba(11,11,13,0) 0%, rgba(11,11,13,0.55) 60%, rgba(11,11,13,0.95) 100%);
+    z-index:1; pointer-events:none;
+  }
+  .hero-content{position:relative; z-index:2; text-align:center; max-width:760px; padding:0 24px;}
+  .hero-content .line{width:64px; height:1px; background:var(--gold); margin:0 auto 28px;}
+  .hero-content h1{font-size:clamp(2.4rem, 6vw, 4.6rem); color:var(--text); font-weight:400;}
+  .hero-content h1 em{font-style:italic; color:var(--gold-light);}
+  .hero-content p{margin-top:22px; font-size:1.05rem; color:var(--text-dim); max-width:520px; margin-left:auto; margin-right:auto;}
+  .hero-cta{margin-top:40px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;}
+  .btn{
+    padding:15px 32px; border-radius:2px; font-size:0.88rem; letter-spacing:0.03em;
+    transition:all 0.25s; display:inline-block; border:1px solid transparent;
+  }
+  .btn-primary{background:var(--gold); color:#100D06; font-weight:600;}
+  .btn-primary:hover{background:var(--gold-light); transform:translateY(-2px);}
+  .btn-ghost{border-color:var(--border); color:var(--text-dim);}
+  .btn-ghost:hover{border-color:var(--gold-dim); color:var(--gold-light);}
+  .btn-danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
+  .btn-danger:hover{background:var(--danger); color:#fff;}
+  .scroll-cue{position:absolute; bottom:34px; left:50%; transform:translateX(-50%); z-index:2; text-align:center;}
+  .scroll-cue .dash{width:1px; height:36px; background:linear-gradient(var(--gold), transparent); margin:0 auto 8px; animation:pulse-dash 2s ease-in-out infinite;}
+  .scroll-cue span{font-size:0.68rem; letter-spacing:0.2em; color:var(--text-muted);}
+  @keyframes pulse-dash{0%,100%{opacity:0.3;} 50%{opacity:1;}}
+
+  /* ---------- Section shared ---------- */
+  section{padding:90px 5%;}
+  .section-head{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:44px; flex-wrap:wrap;}
+  .section-head h2{font-size:clamp(1.8rem, 3.4vw, 2.6rem); font-weight:400;}
+  .section-head p{color:var(--text-dim); max-width:420px; font-size:0.94rem;}
+
+  /* ---------- Filter bar ---------- */
+  .filter-bar{
+    display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+    background:var(--panel); border:1px solid var(--border); border-radius:3px;
+    padding:18px 22px; margin-bottom:48px;
+  }
+  .filter-bar input, .filter-bar select{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:2px; font-family:inherit; font-size:0.86rem;
+  }
+  .filter-bar input:focus, .filter-bar select:focus{outline:none; border-color:var(--gold-dim);}
+  .filter-bar input#search{flex:1; min-width:180px;}
+  .filter-count{margin-left:auto; font-size:0.82rem; color:var(--text-muted);}
+
+  /* ---------- Listing grid ---------- */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:28px;}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:3px;
+    overflow:hidden; transition:transform 0.25s, border-color 0.25s;
+    cursor:pointer; display:flex; flex-direction:column;
+  }
+  .card:hover{transform:translateY(-4px); border-color:var(--gold-dim);}
+  .card-photo{position:relative; height:220px; background:var(--panel-2); overflow:hidden;}
+  .card-photo img{width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.5s;}
+  .card:hover .card-photo img{transform:scale(1.06);}
+  .card-photo .no-photo{display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:0.8rem; letter-spacing:0.08em;}
+  .badges{position:absolute; top:12px; left:12px; display:flex; gap:8px;}
+  .badge{font-size:0.68rem; letter-spacing:0.05em; padding:5px 11px; border-radius:2px; backdrop-filter:blur(6px);}
+  .badge-type-sale{background:rgba(199,160,92,0.9); color:#100D06;}
+  .badge-type-rent{background:rgba(29,29,34,0.85); color:var(--gold-light); border:1px solid var(--gold-dim);}
+  .card-body{padding:22px; display:flex; flex-direction:column; gap:10px; flex:1;}
+  .card-body .cat{font-size:0.72rem; letter-spacing:0.08em; color:var(--gold-dim);}
+  .card-body h3{font-size:1.2rem; font-weight:500; color:var(--text);}
+  .card-body .loc{font-size:0.84rem; color:var(--text-dim); display:flex; align-items:center; gap:6px;}
+  .card-foot{margin-top:auto; display:flex; align-items:center; justify-content:space-between; padding-top:14px; border-top:1px solid var(--border);}
+  .card-foot .price{font-family:'Fraunces', serif; font-size:1.3rem; color:var(--gold-light);}
+  .card-foot .meta{font-size:0.78rem; color:var(--text-muted);}
+  .empty-state{grid-column:1/-1; text-align:center; padding:70px 20px; color:var(--text-muted);}
+  .empty-state h3{color:var(--text-dim); font-weight:400; margin-bottom:10px;}
+
+  /* ---------- Contact / footer ---------- */
+  .contact-section{background:var(--panel); border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .contact-wrap{display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;}
+  .contact-wrap h2{font-size:clamp(1.8rem,3vw,2.4rem); margin-bottom:16px;}
+  .contact-wrap p{color:var(--text-dim); margin-bottom:26px; max-width:440px;}
+  .contact-info{display:flex; flex-direction:column; gap:16px;}
+  .contact-info div{font-size:0.92rem; color:var(--text-dim);}
+  .contact-info span{color:var(--gold-light); display:block; font-size:0.72rem; letter-spacing:0.1em; margin-bottom:3px;}
+  .contact-form{display:flex; flex-direction:column; gap:14px;}
+  .contact-form input, .contact-form textarea{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:14px; border-radius:2px; font-family:inherit; font-size:0.88rem; width:100%;
+  }
+  .contact-form textarea{resize:vertical; min-height:100px;}
+
+  footer{padding:44px 5% 30px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;}
+  footer .fmark{font-family:'Fraunces', serif; color:var(--gold-light); font-size:1.1rem;}
+  footer .fmeta{font-size:0.78rem; color:var(--text-muted);}
+  footer .flinks{display:flex; gap:20px; font-size:0.8rem; color:var(--text-muted);}
+  footer .flinks a:hover{color:var(--gold-light);}
+
+  /* ---------- Modal (listing detail) ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,6,7,0.86); backdrop-filter:blur(4px);
+    z-index:100; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .modal{
+    background:var(--panel); border:1px solid var(--border); border-radius:4px;
+    max-width:920px; width:100%; max-height:88vh; overflow-y:auto; position:relative;
+  }
+  .modal-close{
+    position:absolute; top:16px; right:16px; z-index:5; width:38px; height:38px;
+    background:rgba(11,11,13,0.7); border:1px solid var(--border); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; color:var(--text); font-size:1.1rem;
+  }
+  .modal-gallery{position:relative; height:380px; background:var(--panel-2);}
+  .modal-gallery img{width:100%; height:100%; object-fit:cover; display:block;}
+  .gallery-dots{position:absolute; bottom:16px; left:0; right:0; display:flex; justify-content:center; gap:8px;}
+  .gallery-dots span{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.35); cursor:pointer;}
+  .gallery-dots span.active{background:var(--gold);}
+  .gallery-nav{position:absolute; top:50%; transform:translateY(-50%); width:38px; height:38px; background:rgba(11,11,13,0.55); border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--text); font-size:1rem;}
+  .gallery-nav.prev{left:14px;} .gallery-nav.next{right:14px;}
+  .modal-body{padding:32px 34px 38px;}
+  .modal-body .badges-row{display:flex; gap:10px; margin-bottom:16px;}
+  .modal-body h2{font-size:1.7rem; margin-bottom:8px; font-weight:500;}
+  .modal-body .loc{color:var(--text-dim); font-size:0.92rem; margin-bottom:20px;}
+  .modal-body .price-row{display:flex; align-items:baseline; gap:20px; margin-bottom:22px; flex-wrap:wrap;}
+  .modal-body .price{font-family:'Fraunces', serif; font-size:2rem; color:var(--gold-light);}
+  .spec-row{display:flex; gap:28px; flex-wrap:wrap; margin-bottom:24px; padding:18px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  .spec-row div{font-size:0.85rem; color:var(--text-dim);}
+  .spec-row span{display:block; color:var(--text); font-size:1rem; margin-top:3px; font-family:'Fraunces',serif;}
+  .modal-body .desc{color:var(--text-dim); font-size:0.95rem; line-height:1.75;}
+
+  /* ---------- Admin ---------- */
+  #admin-view{min-height:100vh; padding-top:100px;}
+  .admin-header{display:flex; align-items:center; justify-content:space-between; padding:0 5% 30px; flex-wrap:wrap; gap:16px;}
+  .admin-header h1{font-size:1.9rem; font-weight:400;}
+  .admin-header .tag{font-size:0.72rem; color:var(--gold-dim); letter-spacing:0.12em; display:block; margin-bottom:6px;}
+  .admin-wrap{padding:0 5% 80px; display:grid; grid-template-columns:400px 1fr; gap:32px; align-items:flex-start;}
+  .admin-panel{background:var(--panel); border:1px solid var(--border); border-radius:3px; padding:26px; position:sticky; top:100px;}
+  .admin-panel h3{font-size:1.1rem; margin-bottom:18px; font-weight:500;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:0.78rem; color:var(--text-dim); margin-bottom:7px; letter-spacing:0.02em;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:2px; font-family:inherit; font-size:0.88rem;
+  }
+  .field textarea{min-height:90px; resize:vertical;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .photo-drop{
+    border:1.5px dashed var(--border); border-radius:3px; padding:24px; text-align:center;
+    cursor:pointer; transition:border-color 0.2s; color:var(--text-muted); font-size:0.82rem;
+  }
+  .photo-drop:hover{border-color:var(--gold-dim);}
+  .photo-preview{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .photo-preview .thumb{position:relative; width:60px; height:60px; border-radius:2px; overflow:hidden;}
+  .photo-preview .thumb img{width:100%; height:100%; object-fit:cover;}
+  .photo-preview .thumb button{
+    position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%;
+    background:rgba(0,0,0,0.7); color:#fff; border:none; font-size:0.6rem; line-height:1;
+  }
+  .admin-submit{width:100%; margin-top:8px; padding:14px; background:var(--gold); color:#100D06; border:none; border-radius:2px; font-weight:600; font-size:0.9rem;}
+  .admin-submit:hover{background:var(--gold-light);}
+  .admin-cancel{width:100%; margin-top:8px; padding:12px; background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:2px; font-size:0.85rem;}
+
+  .admin-list{display:flex; flex-direction:column; gap:12px;}
+  .admin-row{
+    background:var(--panel); border:1px solid var(--border); border-radius:3px;
+    padding:14px 18px; display:flex; align-items:center; gap:16px;
+  }
+  .admin-row .thumb{width:64px; height:64px; border-radius:2px; overflow:hidden; background:var(--panel-2); flex-shrink:0;}
+  .admin-row .thumb img{width:100%; height:100%; object-fit:cover;}
+  .admin-row .info{flex:1; min-width:0;}
+  .admin-row .info h4{font-size:0.98rem; font-weight:500; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .admin-row .info .meta{font-size:0.78rem; color:var(--text-muted);}
+  .admin-row .price{font-family:'Fraunces',serif; color:var(--gold-light); font-size:1rem; white-space:nowrap;}
+  .admin-row .actions{display:flex; gap:8px;}
+  .icon-btn{width:34px; height:34px; border-radius:2px; border:1px solid var(--border); background:var(--panel-2); color:var(--text-dim); display:flex; align-items:center; justify-content:center; font-size:0.85rem;}
+  .icon-btn:hover{border-color:var(--gold-dim); color:var(--gold-light);}
+  .icon-btn.del:hover{border-color:var(--danger); color:var(--danger);}
+
+  /* ---------- Login modal ---------- */
+  .login-box{background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:40px; width:100%; max-width:380px;}
+  .login-box h3{font-size:1.4rem; margin-bottom:6px; font-weight:500;}
+  .login-box p.hint{font-size:0.8rem; color:var(--text-muted); margin-bottom:24px;}
+  .login-err{color:var(--danger); font-size:0.8rem; margin-top:4px; min-height:16px;}
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2); border:1px solid var(--gold-dim); color:var(--gold-light);
+    padding:14px 26px; border-radius:3px; font-size:0.85rem; z-index:200;
+    opacity:0; pointer-events:none; transition:opacity 0.3s, transform 0.3s;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  @media (max-width: 860px){
+    nav.links{position:fixed; top:0; right:0; bottom:0; width:78%; max-width:320px; background:var(--panel); flex-direction:column; align-items:flex-start; padding:100px 30px; gap:26px; transform:translateX(100%); transition:transform 0.3s; border-left:1px solid var(--border);}
+    nav.links.open{transform:translateX(0);}
+    .burger{display:flex; z-index:60;}
+    .admin-wrap{grid-template-columns:1fr;}
+    .admin-panel{position:static;}
+    .contact-wrap{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= SITE VIEW ================= -->
+<div id="site-view">
+  <header id="site-header">
+    <a href="#" class="logo"><span class="mark">Berk Mutlu</span><span class="sub">GAYRİMENKUL</span></a>
+    <nav class="links" id="nav-links">
+      <a href="#home" onclick="closeMenu()">Ana Sayfa</a>
+      <a href="#listings" onclick="closeMenu()">İlanlar</a>
+      <a href="#contact" onclick="closeMenu()">İletişim</a>
+      <a href="#" class="admin-link" onclick="openLogin(); closeMenu(); return false;">Yönetici</a>
+    </nav>
+    <button class="burger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+  </header>
+
+  <section class="hero" id="home">
+    <canvas id="bg-canvas"></canvas>
+    <div class="hero-content">
+      <div class="line"></div>
+      <h1>Her Zemin Bir <em>Başlangıçtır</em></h1>
+      <p>Şehrin en seçkin bölgelerinden satılık ve kiralık daire, villa, müstakil ev ve arsa fırsatlarını keşfedin.</p>
+      <div class="hero-cta">
+        <a href="#listings" class="btn btn-primary">İlanları Keşfet</a>
+        <a href="#contact" class="btn btn-ghost">Bize Ulaşın</a>
+      </div>
+    </div>
+    <div class="scroll-cue"><div class="dash"></div><span>AŞAĞI KAYDIRIN</span></div>
+  </section>
+
+  <section id="listings">
+    <div class="section-head">
+      <div>
+        <h2>Güncel İlanlar</h2>
+        <p>İhtiyacınıza uygun mülkü bulmak için kategori, tür ve konuma göre filtreleyin.</p>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="search" placeholder="Konum veya başlık ara...">
+      <select id="filter-category">
+        <option value="all">Tüm Kategoriler</option>
+        <option value="Daire">Daire</option>
+        <option value="Villa">Villa</option>
+        <option value="Müstakil Ev">Müstakil Ev</option>
+        <option value="Arsa">Arsa</option>
+        <option value="İşyeri">İşyeri</option>
+      </select>
+      <select id="filter-type">
+        <option value="all">Satılık / Kiralık</option>
+        <option value="Satılık">Satılık</option>
+        <option value="Kiralık">Kiralık</option>
+      </select>
+      <select id="filter-sort">
+        <option value="new">En Yeni</option>
+        <option value="price-asc">Fiyat: Düşükten Yükseğe</option>
+        <option value="price-desc">Fiyat: Yüksekten Düşüğe</option>
+      </select>
+      <span class="filter-count" id="filter-count">0 ilan</span>
+    </div>
+
+    <div class="grid" id="listing-grid"></div>
+  </section>
+
+  <section class="contact-section" id="contact">
+    <div class="contact-wrap">
+      <div>
+        <h2>Doğru Mülkü Birlikte Bulalım</h2>
+        <p>Satmak, kiralamak ya da hayalinizdeki mekanı bulmak istiyorsanız, ekibimiz size özel bir görüşme için hazır.</p>
+        <div class="contact-info">
+          <div><span>TELEFON</span>+90 545 426 8962</div>
+          <div><span>E-POSTA</span>berkmutlu701@gmail.com</div>
+          <div><span>OFİS</span>Karaman, Türkiye</div>
+        </div>
+      </div>
+      <form class="contact-form" onsubmit="event.preventDefault(); showToast('Mesajınız alındı, en kısa sürede dönüş yapacağız.');">
+        <input type="text" placeholder="Ad Soyad" required>
+        <input type="email" placeholder="E-posta" required>
+        <textarea placeholder="Mesajınız" required></textarea>
+        <button type="submit" class="btn btn-primary" style="border:none;">Mesaj Gönder</button>
+      </form>
+    </div>
+  </section>
+
+  <footer>
+    <span class="fmark">BM</span>
+    <span class="fmeta">&copy; 2026 BM Gayrimenkul. Tüm hakları saklıdır.</span>
+    <div class="flinks">
+      <a href="#listings">İlanlar</a>
+      <a href="#contact">İletişim</a>
+      <a href="#" onclick="openLogin(); return false;">Yönetici Paneli</a>
+    </div>
+  </footer>
+</div>
+
+<!-- ================= ADMIN VIEW ================= -->
+<div id="admin-view" class="hidden">
+  <header class="scrolled">
+    <a href="#" class="logo" onclick="exitAdmin(); return false;"><span class="mark">BM</span><span class="sub">YÖNETİCİ PANELİ</span></a>
+    <nav class="links" style="position:static; transform:none; flex-direction:row; padding:0; background:none; border:none; width:auto;">
+      <a href="#" class="admin-link" onclick="exitAdmin(); return false;">Siteye Dön</a>
+    </nav>
+  </header>
+
+  <div class="admin-header">
+    <div>
+      <span class="tag">İLAN YÖNETİMİ</span>
+      <h1>Yönetici Paneli</h1>
+    </div>
+  </div>
+
+  <div class="admin-wrap">
+    <div class="admin-panel">
+      <h3 id="form-title">Yeni İlan Ekle</h3>
+      <div class="field">
+        <label>İlan Başlığı</label>
+        <input type="text" id="f-title" placeholder="örn. Bahçeli Müstakil Ev">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Kategori</label>
+          <select id="f-category">
+            <option>Daire</option>
+            <option>Villa</option>
+            <option>Müstakil Ev</option>
+            <option>Arsa</option>
+            <option>İşyeri</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Durum</label>
+          <select id="f-type">
+            <option>Satılık</option>
+            <option>Kiralık</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Fiyat (TL)</label>
+          <input type="number" id="f-price" placeholder="2500000">
+        </div>
+        <div class="field">
+          <label>m²</label>
+          <input type="number" id="f-size" placeholder="145">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Oda Sayısı</label>
+          <input type="text" id="f-rooms" placeholder="3+1 (opsiyonel)">
+        </div>
+        <div class="field">
+          <label>Konum</label>
+          <input type="text" id="f-location" placeholder="Selçuklu, Konya">
+        </div>
+      </div>
+      <div class="field">
+        <label>Açıklama</label>
+        <textarea id="f-desc" placeholder="Mülk hakkında detaylı bilgi..."></textarea>
+      </div>
+      <div class="field">
+        <label>Fotoğraflar</label>
+        <div class="photo-drop" onclick="document.getElementById('f-photos').click()">
+          Fotoğraf eklemek için tıklayın (birden fazla seçebilirsiniz)
+        </div>
+        <input type="file" id="f-photos" accept="image/*" multiple class="hidden" onchange="handlePhotoSelect(event)">
+        <div class="photo-preview" id="photo-preview"></div>
+      </div>
+      <button class="admin-submit" id="submit-btn" onclick="submitListing()">İlanı Yayınla</button>
+      <button class="admin-cancel hidden" id="cancel-edit-btn" onclick="cancelEdit()">Düzenlemeyi İptal Et</button>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:16px; font-weight:500;">Yayındaki İlanlar (<span id="admin-count">0</span>)</h3>
+      <div class="admin-list" id="admin-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= LOGIN OVERLAY ================= -->
+<div class="overlay hidden" id="login-overlay">
+  <div class="login-box">
+    <h3>Yönetici Girişi</h3>
+    <p class="hint">İlanları eklemek ve düzenlemek için giriş yapın.</p>
+    <div class="field">
+      <label>Kullanıcı Adı</label>
+      <input type="text" id="login-user" placeholder="admin">
+    </div>
+    <div class="field">
+      <label>Şifre</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter') tryLogin();">
+    </div>
+    <div class="login-err" id="login-err"></div>
+    <button class="admin-submit" onclick="tryLogin()">Giriş Yap</button>
+    <button class="admin-cancel" onclick="closeLogin()">Vazgeç</button>
+  </div>
+</div>
+
+<!-- ================= LISTING DETAIL MODAL ================= -->
+<div class="overlay hidden" id="detail-overlay" onclick="if(event.target===this) closeDetail()">
+  <div class="modal" id="detail-modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   THREE.JS BACKGROUND — rotating gold wireframe structures
+   ========================================================= */
+(function(){
+  const canvas = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 9);
+
+  function resize(){
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w/h;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const gold = new THREE.Color(0xC7A05C);
+  const goldDim = new THREE.Color(0x6B5A34);
+  const group = new THREE.Group();
+  scene.add(group);
+
+  const shapes = [];
+  const geos = [
+    () => new THREE.IcosahedronGeometry(2.4, 0),
+    () => new THREE.OctahedronGeometry(1.7, 0),
+    () => new THREE.TetrahedronGeometry(1.5, 0),
+    () => new THREE.IcosahedronGeometry(1.1, 1),
+  ];
+  for(let i=0;i<5;i++){
+    const geo = geos[i % geos.length]();
+    const mat = new THREE.MeshBasicMaterial({color: i%2===0?gold:goldDim, wireframe:true, transparent:true, opacity: 0.32 - i*0.02});
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set((Math.random()-0.5)*10, (Math.random()-0.5)*6, (Math.random()-0.5)*6 - 2);
+    mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+    mesh.userData.speed = 0.05 + Math.random()*0.08;
+    mesh.userData.axis = new THREE.Vector3(Math.random()-0.5, Math.random()-0.5, Math.random()-0.5).normalize();
+    group.add(mesh);
+    shapes.push(mesh);
+  }
+
+  // particle field
+  const particleCount = 220;
+  const positions = new Float32Array(particleCount*3);
+  for(let i=0;i<particleCount;i++){
+    positions[i*3] = (Math.random()-0.5)*24;
+    positions[i*3+1] = (Math.random()-0.5)*14;
+    positions[i*3+2] = (Math.random()-0.5)*14 - 4;
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const pMat = new THREE.PointsMaterial({color: 0xC7A05C, size:0.028, transparent:true, opacity:0.55});
+  const points = new THREE.Points(pGeo, pMat);
+  scene.add(points);
+
+  let mouseX = 0, mouseY = 0;
+  window.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth - 0.5);
+    mouseY = (e.clientY / window.innerHeight - 0.5);
+  });
+
+  const clock = new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    shapes.forEach(m => {
+      m.rotateOnAxis(m.userData.axis, m.userData.speed * dt);
+    });
+    points.rotation.y += dt * 0.01;
+    camera.position.x += (mouseX*1.2 - camera.position.x) * 0.02;
+    camera.position.y += (-mouseY*0.8 - camera.position.y) * 0.02;
+    camera.lookAt(0,0,0);
+    renderer.render(scene, camera);
+  }
+  animate();
+})();
+
+/* =========================================================
+   NAV BEHAVIOUR
+   ========================================================= */
+const header = document.getElementById('site-header');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('scrolled', window.scrollY > 40);
+});
+function toggleMenu(){ document.getElementById('nav-links').classList.toggle('open'); }
+function closeMenu(){ document.getElementById('nav-links').classList.remove('open'); }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* =========================================================
+   STATE + STORAGE
+   ========================================================= */
+let listings = [];
+let editingId = null;
+let pendingPhotos = [];
+let currentDetailPhotos = [];
+let currentPhotoIndex = 0;
+
+const SAMPLE_LISTINGS = [
+  {id:'s1', title:'Bahçeli Müstakil Ev', category:'Müstakil Ev', type:'Satılık', price:4850000, size:210, rooms:'4+1', location:'Selçuklu, Konya', desc:'Geniş bahçeli, doğalgaz kombili, ana caddeye yakın konumda ferah bir müstakil ev. Yakın çevrede okul ve market bulunmaktadır.', photos:['https://picsum.photos/seed/kosk-house1/900/600','https://picsum.photos/seed/kosk-house1b/900/600'], date:Date.now()-86400000*2},
+  {id:'s2', title:'Merkezi Konumda Kiralık Daire', category:'Daire', type:'Kiralık', price:14500, size:120, rooms:'2+1', location:'Meram, Konya', desc:'Yeni yapılmış sitede, otoparklı, asansörlü, eşyasız kiralık daire. Toplu taşımaya yürüme mesafesinde.', photos:['https://picsum.photos/seed/kosk-flat1/900/600'], date:Date.now()-86400000*5},
+  {id:'s3', title:'Yatırımlık İmarlı Arsa', category:'Arsa', type:'Satılık', price:1250000, size:500, rooms:'', location:'Karatay, Konya', desc:'Yola cepheli, imar durumu net, yatırım için uygun köşe arsa. Tapu devrine hazır.', photos:['https://picsum.photos/seed/kosk-land1/900/600'], date:Date.now()-86400000*9},
+  {id:'s4', title:'Havuzlu Villa', category:'Villa', type:'Satılık', price:9200000, size:340, rooms:'5+2', location:'Beyşehir, Konya', desc:'Doğa manzaralı, özel havuzlu, geniş yaşam alanlarına sahip müstakil villa. Akıllı ev sistemi mevcuttur.', photos:['https://picsum.photos/seed/kosk-villa1/900/600','https://picsum.photos/seed/kosk-villa1b/900/600','https://picsum.photos/seed/kosk-villa1c/900/600'], date:Date.now()-86400000*1},
+  {id:'s5', title:'Cadde Üzeri Kiralık İşyeri', category:'İşyeri', type:'Kiralık', price:32000, size:90, rooms:'', location:'Karatay, Konya', desc:'Yoğun yaya trafiğine sahip cadde üzerinde vitrinli, her türlü ticarete uygun işyeri.', photos:['https://picsum.photos/seed/kosk-shop1/900/600'], date:Date.now()-86400000*4},
+];
+
+async function loadListings(){
+  try{
+    const res = await window.storage.get('kosk-listings', true);
+    listings = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    listings = [];
+  }
+  if(!listings || listings.length === 0){
+    listings = SAMPLE_LISTINGS;
+    await saveListings();
+  }
+  renderListings();
+  renderAdminList();
+}
+
+async function saveListings(){
+  try{
+    await window.storage.set('kosk-listings', JSON.stringify(listings), true);
+  }catch(e){
+    console.error('Kaydetme hatası', e);
+    showToast('İlanlar kaydedilirken bir sorun oluştu.');
+  }
+}
+
+/* =========================================================
+   RENDER: SITE LISTINGS
+   ========================================================= */
+function formatPrice(n){
+  return new Intl.NumberFormat('tr-TR').format(n) + ' TL';
+}
+
+function getFilteredListings(){
+  const search = document.getElementById('search').value.trim().toLowerCase();
+  const cat = document.getElementById('filter-category').value;
+  const type = document.getElementById('filter-type').value;
+  const sort = document.getElementById('filter-sort').value;
+
+  let out = listings.filter(l => {
+    const matchSearch = !search || l.title.toLowerCase().includes(search) || l.location.toLowerCase().includes(search);
+    const matchCat = cat === 'all' || l.category === cat;
+    const matchType = type === 'all' || l.type === type;
+    return matchSearch && matchCat && matchType;
+  });
+
+  if(sort === 'price-asc') out.sort((a,b)=>a.price-b.price);
+  else if(sort === 'price-desc') out.sort((a,b)=>b.price-a.price);
+  else out.sort((a,b)=>b.date-a.date);
+
+  return out;
+}
+
+function renderListings(){
+  const grid = document.getElementById('listing-grid');
+  const filtered = getFilteredListings();
+  document.getElementById('filter-count').textContent = filtered.length + ' ilan';
+
+  if(filtered.length === 0){
+    grid.innerHTML = '<div class="empty-state"><h3>Uygun ilan bulunamadı</h3><p>Filtreleri değiştirerek tekrar deneyin.</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(l => `
+    <div class="card" onclick="openDetail('${l.id}')">
+      <div class="card-photo">
+        ${l.photos && l.photos.length ? `<img src="${l.photos[0]}" alt="${l.title}">` : `<div class="no-photo">FOTOĞRAF YOK</div>`}
+        <div class="badges">
+          <span class="badge ${l.type==='Satılık'?'badge-type-sale':'badge-type-rent'}">${l.type}</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <span class="cat">${l.category.toUpperCase()}</span>
+        <h3>${l.title}</h3>
+        <div class="loc">${l.location}</div>
+        <div class="card-foot">
+          <span class="price">${formatPrice(l.price)}</span>
+          <span class="meta">${l.size ? l.size+' m²' : ''}${l.rooms ? ' · '+l.rooms : ''}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+['search','filter-category','filter-type','filter-sort'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', renderListings);
+  document.getElementById(id).addEventListener('change', renderListings);
+});
+
+/* =========================================================
+   DETAIL MODAL
+   ========================================================= */
+function openDetail(id){
+  const l = listings.find(x=>x.id===id);
+  if(!l) return;
+  currentDetailPhotos = (l.photos && l.photos.length) ? l.photos : [];
+  currentPhotoIndex = 0;
+
+  const modal = document.getElementById('detail-modal');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeDetail()">✕</button>
+    <div class="modal-gallery" id="modal-gallery">
+      ${currentDetailPhotos.length ? `<img id="gallery-img" src="${currentDetailPhotos[0]}">` : `<div class="no-photo" style="height:100%; display:flex; align-items:center; justify-content:center;">FOTOĞRAF YOK</div>`}
+      ${currentDetailPhotos.length > 1 ? `
+        <button class="gallery-nav prev" onclick="shiftPhoto(-1)">‹</button>
+        <button class="gallery-nav next" onclick="shiftPhoto(1)">›</button>
+        <div class="gallery-dots">${currentDetailPhotos.map((_,i)=>`<span class="${i===0?'active':''}" onclick="setPhoto(${i})"></span>`).join('')}</div>
+      ` : ''}
+    </div>
+    <div class="modal-body">
+      <div class="badges-row">
+        <span class="badge ${l.type==='Satılık'?'badge-type-sale':'badge-type-rent'}" style="position:static;">${l.type}</span>
+        <span class="badge" style="position:static; background:var(--panel-2); color:var(--gold-dim); border:1px solid var(--border);">${l.category}</span>
+      </div>
+      <h2>${l.title}</h2>
+      <div class="loc">📍 ${l.location}</div>
+      <div class="price-row"><span class="price">${formatPrice(l.price)}</span></div>
+      <div class="spec-row">
+        ${l.size ? `<div>Metrekare<span>${l.size} m²</span></div>` : ''}
+        ${l.rooms ? `<div>Oda Sayısı<span>${l.rooms}</span></div>` : ''}
+        <div>Kategori<span>${l.category}</span></div>
+      </div>
+      <p class="desc">${l.desc || 'Bu ilan için henüz açıklama eklenmemiş.'}</p>
+    </div>
+  `;
+  document.getElementById('detail-overlay').classList.remove('hidden');
+}
+function shiftPhoto(dir){
+  currentPhotoIndex = (currentPhotoIndex + dir + currentDetailPhotos.length) % currentDetailPhotos.length;
+  setPhoto(currentPhotoIndex);
+}
+function setPhoto(i){
+  currentPhotoIndex = i;
+  document.getElementById('gallery-img').src = currentDetailPhotos[i];
+  document.querySelectorAll('.gallery-dots span').forEach((d,idx)=>d.classList.toggle('active', idx===i));
+}
+function closeDetail(){ document.getElementById('detail-overlay').classList.add('hidden'); }
+
+/* =========================================================
+   ADMIN LOGIN
+   ========================================================= */
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'kosk2026';
+let isAdmin = false;
+
+function openLogin(){
+  if(isAdmin){ enterAdmin(); return; }
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+function closeLogin(){ document.getElementById('login-overlay').classList.add('hidden'); }
+function tryLogin(){
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  if(u === ADMIN_USER && p === ADMIN_PASS){
+    isAdmin = true;
+    closeLogin();
+    enterAdmin();
+  }else{
+    document.getElementById('login-err').textContent = 'Kullanıcı adı veya şifre hatalı.';
+  }
+}
+function enterAdmin(){
+  document.getElementById('site-view').classList.add('hidden');
+  document.getElementById('admin-view').classList.remove('hidden');
+  window.scrollTo(0,0);
+  renderAdminList();
+}
+function exitAdmin(){
+  document.getElementById('admin-view').classList.add('hidden');
+  document.getElementById('site-view').classList.remove('hidden');
+  cancelEdit();
+  window.scrollTo(0,0);
+}
+
+/* =========================================================
+   ADMIN: PHOTO UPLOAD (compressed to keep storage small)
+   ========================================================= */
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 1000;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoSelect(event){
+  const files = Array.from(event.target.files);
+  for(const file of files){
+    try{
+      const compressed = await compressImage(file);
+      pendingPhotos.push(compressed);
+    }catch(e){ console.error(e); }
+  }
+  renderPhotoPreview();
+  event.target.value = '';
+}
+function renderPhotoPreview(){
+  const wrap = document.getElementById('photo-preview');
+  wrap.innerHTML = pendingPhotos.map((p, i) => `
+    <div class="thumb"><img src="${p}"><button onclick="removePendingPhoto(${i})">✕</button></div>
+  `).join('');
+}
+function removePendingPhoto(i){
+  pendingPhotos.splice(i,1);
+  renderPhotoPreview();
+}
+
+/* =========================================================
+   ADMIN: CREATE / EDIT / DELETE LISTINGS
+   ========================================================= */
+async function submitListing(){
+  const title = document.getElementById('f-title').value.trim();
+  const category = document.getElementById('f-category').value;
+  const type = document.getElementById('f-type').value;
+  const price = parseFloat(document.getElementById('f-price').value);
+  const size = parseFloat(document.getElementById('f-size').value) || null;
+  const rooms = document.getElementById('f-rooms').value.trim();
+  const location = document.getElementById('f-location').value.trim();
+  const desc = document.getElementById('f-desc').value.trim();
+
+  if(!title || !location || isNaN(price)){
+    showToast('Lütfen başlık, konum ve fiyat alanlarını doldurun.');
+    return;
+  }
+
+  if(editingId){
+    const idx = listings.findIndex(l=>l.id===editingId);
+    if(idx > -1){
+      listings[idx] = {...listings[idx], title, category, type, price, size, rooms, location, desc, photos: pendingPhotos.length ? pendingPhotos : listings[idx].photos};
+    }
+    showToast('İlan güncellendi.');
+  }else{
+    listings.unshift({
+      id: 'l' + Date.now(),
+      title, category, type, price, size, rooms, location, desc,
+      photos: pendingPhotos,
+      date: Date.now()
+    });
+    showToast('İlan yayınlandı.');
+  }
+
+  await saveListings();
+  cancelEdit();
+  renderListings();
+  renderAdminList();
+}
+
+function editListing(id){
+  const l = listings.find(x=>x.id===id);
+  if(!l) return;
+  editingId = id;
+  document.getElementById('form-title').textContent = 'İlanı Düzenle';
+  document.getElementById('f-title').value = l.title;
+  document.getElementById('f-category').value = l.category;
+  document.getElementById('f-type').value = l.type;
+  document.getElementById('f-price').value = l.price;
+  document.getElementById('f-size').value = l.size || '';
+  document.getElementById('f-rooms').value = l.rooms || '';
+  document.getElementById('f-location').value = l.location;
+  document.getElementById('f-desc').value = l.desc || '';
+  pendingPhotos = [];
+  renderPhotoPreview();
+  document.getElementById('submit-btn').textContent = 'Değişiklikleri Kaydet';
+  document.getElementById('cancel-edit-btn').classList.remove('hidden');
+  document.querySelector('.admin-panel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function cancelEdit(){
+  editingId = null;
+  pendingPhotos = [];
+  document.getElementById('form-title').textContent = 'Yeni İlan Ekle';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-price').value = '';
+  document.getElementById('f-size').value = '';
+  document.getElementById('f-rooms').value = '';
+  document.getElementById('f-location').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('submit-btn').textContent = 'İlanı Yayınla';
+  document.getElementById('cancel-edit-btn').classList.add('hidden');
+  renderPhotoPreview();
+}
+
+async function deleteListing(id){
+  if(!confirm('Bu ilanı silmek istediğinize emin misiniz?')) return;
+  listings = listings.filter(l=>l.id!==id);
+  await saveListings();
+  renderListings();
+  renderAdminList();
+  showToast('İlan silindi.');
+}
+
+function renderAdminList(){
+  const wrap = document.getElementById('admin-list');
+  document.getElementById('admin-count').textContent = listings.length;
+  if(listings.length === 0){
+    wrap.innerHTML = '<div class="empty-state" style="padding:40px 0;">Henüz ilan eklenmedi.</div>';
+    return;
+  }
+  const sorted = [...listings].sort((a,b)=>b.date-a.date);
+  wrap.innerHTML = sorted.map(l => `
+    <div class="admin-row">
+      <div class="thumb">${l.photos && l.photos.length ? `<img src="${l.photos[0]}">` : ''}</div>
+      <div class="info">
+        <h4>${l.title}</h4>
+        <div class="meta">${l.category} · ${l.type} · ${l.location}</div>
+      </div>
+      <div class="price">${formatPrice(l.price)}</div>
+      <div class="actions">
+        <button class="icon-btn" onclick="editListing('${l.id}')" title="Düzenle">✎</button>
+        <button class="icon-btn del" onclick="deleteListing('${l.id}')" title="Sil">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+loadListings();
+</script>
+</body>
+</html>

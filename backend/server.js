@@ -8,8 +8,13 @@ const messageRoutes = require('./routes/messages');
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: [
+    'https://bmgayrimenkul.com',
+    'https://www.bmgayrimenkul.com',
+    'http://localhost:3000'
+  ]
+}));app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 app.use('/api/auth', authRoutes);

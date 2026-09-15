@@ -1,15 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
 const db = require('../config/db');
 const verifyToken = require('../middleware/auth');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/listings'),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'bm-gayrimenkul/listings',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
   }
 });
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -60,7 +61,7 @@ router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
     const listingId = result.insertId;
 
     if (req.files && req.files.length) {
-      const values = req.files.map((f, i) => [listingId, `/uploads/listings/${f.filename}`, i]);
+      const values = req.files.map((f, i) => [listingId, f.path, i]);
       await db.query('INSERT INTO listing_photos (listing_id, url, sort_order) VALUES ?', [values]);
     }
 
@@ -82,7 +83,7 @@ router.put('/:id', verifyToken, upload.array('photos', 10), async (req, res) => 
     );
 
     if (req.files && req.files.length) {
-      const values = req.files.map((f, i) => [req.params.id, `/uploads/listings/${f.filename}`, i]);
+      const values = req.files.map((f, i) => [req.params.id, f.path, i]);
       await db.query('INSERT INTO listing_photos (listing_id, url, sort_order) VALUES ?', [values]);
     }
 

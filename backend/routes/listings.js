@@ -67,7 +67,7 @@ router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
 
     res.status(201).json({ id: listingId, message: 'İlan eklendi.' });
   } catch (err) {
-    console.error(err);
+    console.error('HATA DETAY:', err && err.message, err);
     res.status(500).json({ error: 'İlan eklenemedi.' });
   }
 });

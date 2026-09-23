@@ -25,6 +25,12 @@ app.get('/api/test', (req, res) => {
   res.json({ message: "BM Gayrimenkul API ayağa kalktı!" });
 });
 
+// Genel hata yakalayıcı
+app.use((err, req, res, next) => {
+  console.error('GENEL HATA:', err && err.message, err);
+  res.status(500).json({ error: err && err.message ? err.message : 'Sunucu hatası oluştu.' });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Sunucu http://localhost:${PORT} adresinde çalışıyor.`);

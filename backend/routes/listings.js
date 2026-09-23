@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
     }));
     res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error('HATA DETAY (GET /listings):', err && err.message, err);
     res.status(500).json({ error: 'İlanlar alınamadı.' });
   }
 });
@@ -42,6 +42,7 @@ router.get('/:id', async (req, res) => {
     );
     res.json({ ...rows[0], photos: photos.map(p => p.url) });
   } catch (err) {
+    console.error('HATA DETAY (GET /listings/:id):', err && err.message, err);
     res.status(500).json({ error: 'İlan alınamadı.' });
   }
 });
@@ -67,7 +68,7 @@ router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
 
     res.status(201).json({ id: listingId, message: 'İlan eklendi.' });
   } catch (err) {
-    console.error('HATA DETAY:', err && err.message, err);
+    console.error('HATA DETAY (POST /listings):', err && err.message, err);
     res.status(500).json({ error: 'İlan eklenemedi.' });
   }
 });
@@ -89,7 +90,7 @@ router.put('/:id', verifyToken, upload.array('photos', 10), async (req, res) => 
 
     res.json({ message: 'İlan güncellendi.' });
   } catch (err) {
-    console.error(err);
+    console.error('HATA DETAY (PUT /listings/:id):', err && err.message, err);
     res.status(500).json({ error: 'İlan güncellenemedi.' });
   }
 });
@@ -100,6 +101,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await db.query('DELETE FROM listings WHERE id = ?', [req.params.id]);
     res.json({ message: 'İlan silindi.' });
   } catch (err) {
+    console.error('HATA DETAY (DELETE /listings/:id):', err && err.message, err);
     res.status(500).json({ error: 'İlan silinemedi.' });
   }
 });

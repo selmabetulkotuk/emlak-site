@@ -7,30 +7,28 @@ require('dotenv').config();
 
 // Herkese açık: iletişim formundan mesaj gönder
 router.post('/', async (req, res) => {
-  const { name, email, message } = req.body;
-  if (!name || !email || !message) {
-    return res.status(400).json({ error: 'Tüm alanlar zorunludur.' });
+  const { name, email, phone, message } = req.body;
+  if (!name || !phone) {
+    return res.status(400).json({ error: 'Ad soyad ve telefon numarası zorunludur.' });
   }
 
   try {
-    await db.query('INSERT INTO messages (name, email, message) VALUES (?, ?, ?)', [name, email, message]);
+    await db.query('INSERT INTO messages (name, email, phone, message) VALUES (?, ?, ?, ?)', [name, email || null, phone, message || 'Telefonla geri arama talebi']);
 
-    // E-posta gönder (gönderim başarısız olsa bile mesaj veritabanında kayıtlı kalır)
     transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_TO || process.env.EMAIL_USER,
-      replyTo: email,
-      subject: `Yeni İletişim Mesajı - ${name}`,
-      text: `İsim: ${name}\nE-posta: ${email}\n\nMesaj:\n${message}`
+      replyTo: email || undefined,
+      subject: `Yeni İletişim Talebi - ${name}`,
+      text: `İsim: ${name}\nTelefon: ${phone}\nE-posta: ${email || 'belirtilmedi'}\n\nMesaj:\n${message || 'Telefonla geri arama talebi'}`
     }).catch(err => console.error('E-posta gönderilemedi:', err.message));
 
-    res.status(201).json({ message: 'Mesajınız alındı.' });
+    res.status(201).json({ message: 'Talebiniz alındı.' });
   } catch (err) {
-    console.error(err);
+    console.error('HATA DETAY (POST /messages):', err && err.message, err);
     res.status(500).json({ error: 'Mesaj gönderilemedi.' });
   }
 });
-
 // Admin: gelen mesajları listele
 router.get('/', verifyToken, async (req, res) => {
   try {

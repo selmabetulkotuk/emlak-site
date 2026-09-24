@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
+import { KARAMAN_MAHALLELERI } from '../../lib/mahalleler';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -262,7 +263,12 @@ export default function Admin() {
             </div>
             <div className="field">
               <label>Konum</label>
-              <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="Selçuklu, Konya" />
+              <select value={location} onChange={e => setLocation(e.target.value)}>
+  <option value="">Mahalle seçin</option>
+  {KARAMAN_MAHALLELERI.map(m => (
+    <option key={m} value={m}>{m}</option>
+  ))}
+</select>
             </div>
           </div>
           <div className="field">

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import Link from 'next/link';
+import { KARAMAN_MAHALLELERI } from '../lib/mahalleler';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -12,6 +13,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [type, setType] = useState('all');
+  const [mahalle, setMahalle] = useState('all');
   const [sort, setSort] = useState('new');
   const [selectedListing, setSelectedListing] = useState(null);
   const [photoIndex, setPhotoIndex] = useState(0);
@@ -19,6 +21,28 @@ const [contactName, setContactName] = useState('');
 const [contactEmail, setContactEmail] = useState('');
 const [contactMsg, setContactMsg] = useState('');
 const [contactStatus, setContactStatus] = useState('');
+
+const [callName, setCallName] = useState('');
+const [callPhone, setCallPhone] = useState('');
+const [callStatus, setCallStatus] = useState('');
+
+const requestCall = async (e) => {
+  e.preventDefault();
+  setCallStatus('');
+  try {
+    const res = await fetch(`${API_URL}/api/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: callName, phone: callPhone, message: 'Telefonla geri arama talebi' })
+    });
+    if (!res.ok) throw new Error();
+    setCallStatus('Talebiniz alındı, en kısa sürede arayacağız.');
+    setCallName('');
+    setCallPhone('');
+  } catch (err) {
+    setCallStatus('Bir hata oluştu, lütfen tekrar deneyin.');
+  }
+};
 
 const sendMessage = async (e) => {
   e.preventDefault();
@@ -154,7 +178,8 @@ const sendMessage = async (e) => {
     const matchSearch = !search || l.title.toLowerCase().includes(search.toLowerCase()) || (l.location || '').toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'all' || l.category === category;
     const matchType = type === 'all' || l.type === type;
-    return matchSearch && matchCat && matchType;
+    const matchMahalle = mahalle === 'all' || l.location === mahalle;
+    return matchSearch && matchCat && matchType && matchMahalle;
   }).sort((a, b) => {
     if (sort === 'price-asc') return a.price - b.price;
     if (sort === 'price-desc') return b.price - a.price;
@@ -211,12 +236,20 @@ const sendMessage = async (e) => {
             <option value="Müstakil Ev">Müstakil Ev</option>
             <option value="Arsa">Arsa</option>
             <option value="İşyeri">İşyeri</option>
+            <option value="İşyeri">Apart</option>
+
           </select>
           <select value={type} onChange={e => setType(e.target.value)}>
             <option value="all">Satılık / Kiralık</option>
             <option value="Satılık">Satılık</option>
             <option value="Kiralık">Kiralık</option>
           </select>
+          <select value={mahalle} onChange={e => setMahalle(e.target.value)}>
+  <option value="all">Tüm Mahalleler</option>
+  {KARAMAN_MAHALLELERI.map(m => (
+    <option key={m} value={m}>{m}</option>
+  ))}
+</select>
           <select value={sort} onChange={e => setSort(e.target.value)}>
             <option value="new">En Yeni</option>
             <option value="price-asc">Fiyat: Düşükten Yükseğe</option>
@@ -253,6 +286,18 @@ const sendMessage = async (e) => {
           )}
         </div>
       </section>
+
+      {/* HIZLI ARAMA TALEBİ */}
+<section style={{ padding: '60px 24px', textAlign: 'center', background: 'var(--panel, #1a1a1a)' }}>
+  <h2 style={{ marginBottom: '8px' }}>Sizi Arayalım</h2>
+  <p style={{ marginBottom: '24px', opacity: 0.8 }}>Telefon numaranızı bırakın, size en kısa sürede dönüş yapalım.</p>
+  <form onSubmit={requestCall} style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '600px', margin: '0 auto' }}>
+    <input type="text" placeholder="Ad Soyad" value={callName} onChange={e => setCallName(e.target.value)} required style={{ flex: '1 1 200px' }} />
+    <input type="tel" placeholder="Telefon Numaranız" value={callPhone} onChange={e => setCallPhone(e.target.value)} required style={{ flex: '1 1 200px' }} />
+    <button type="submit" className="btn btn-primary" style={{ border: 'none' }}>Beni Arayın</button>
+  </form>
+  {callStatus && <p style={{ marginTop: '12px', fontSize: '14px' }}>{callStatus}</p>}
+</section>
 
       {/* İLETİŞİM */}
       <section className="contact-section" id="contact">

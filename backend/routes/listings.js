@@ -55,7 +55,7 @@ const DETAIL_FIELDS = [
 ];
 
 // Admin: yeni ilan ekle
-router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
+router.post('/', verifyToken, upload.array('photos', 30), async (req, res) => {
   const { title, category, type, price, size, rooms, location, desc, floor, buildingAge } = req.body;
 
   if (!title || !category || !type || !price) {
@@ -88,7 +88,7 @@ router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
 });
 
 // Admin: ilan güncelle
-router.put('/:id', verifyToken, upload.array('photos', 10), async (req, res) => {
+router.put('/:id', verifyToken, upload.array('photos', 30), async (req, res) => {
   const { title, category, type, price, size, rooms, location, desc, floor, buildingAge } = req.body;
 
   try {

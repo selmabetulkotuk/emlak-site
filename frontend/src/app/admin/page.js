@@ -11,11 +11,11 @@ const quillModules = {
   toolbar: [
     [{ font: [] }, { size: [] }],
     ['bold', 'italic', 'underline'],
+    [{ align: [] }],
     [{ list: 'ordered' }, { list: 'bullet' }],
     ['clean']
   ]
 };
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function Admin() {

@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import axios from 'axios';
-import { KARAMAN_MAHALLELERI } from '../../lib/mahalleler';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
+import { KARAMAN_MAHALLELERI } from '../../lib/mahalleler';
+
 const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 const quillModules = {
@@ -16,10 +17,18 @@ const quillModules = {
     ['clean']
   ]
 };
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+const EMPTY_DETAILS = {
+  grossSize: '', bathroomCount: '', totalFloors: '', tapuDurumu: '', paylasimliIlan: '',
+  gorintuluArama: '', isinmaTipi: '', krediUygun: '', konutSekli: '', esyali: '',
+  yakitTipi: '', yapiTipi: '', yapininDurumu: '', kullanimDurumu: '', yetkiliOfis: '',
+  takas: '', cepheSecenekleri: '', kiraGetirisi: '', eidsOnayli: '', extraNotes: ''
+};
+
 export default function Admin() {
-  // --- KİMLİK DOĞRULAMA (AUTH) STATE'LERİ ---
+  // --- KİMLİK DOĞRULAMA ---
   const [token, setToken] = useState(null);
   const [loginUser, setLoginUser] = useState('');
   const [loginPass, setLoginPass] = useState('');
@@ -38,26 +47,21 @@ export default function Admin() {
   const [desc, setDesc] = useState('');
   const [floor, setFloor] = useState('');
   const [buildingAge, setBuildingAge] = useState('');
-  const [details, setDetails] = useState({
-  grossSize: '', bathroomCount: '', totalFloors: '', tapuDurumu: '', paylasimliIlan: '',
-  gorintuluArama: '', isinmaTipi: '', krediUygun: '', konutSekli: '', esyali: '',
-  yakitTipi: '', yapiTipi: '', yapininDurumu: '', kullanimDurumu: '', yetkiliOfis: '',
-  takas: '', cepheSecenekleri: '', kiraGetirisi: '', eidsOnayli: '', extraNotes: ''
-});
-const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
-  const [pendingPhotos, setPendingPhotos] = useState([]); // Gerçek File nesneleri (yüklenecek)
+  const [details, setDetails] = useState(EMPTY_DETAILS);
+  const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
+
+  const [pendingPhotos, setPendingPhotos] = useState([]); // Yeni seçilen File nesneleri
+  const [existingPhotos, setExistingPhotos] = useState([]); // Düzenlerken mevcut fotoğraf URL'leri
   const [coverKey, setCoverKey] = useState(null); // 'pending-0' ya da mevcut fotoğrafın URL'si
-  const [existingPhotos, setExistingPhotos] = useState([]); // Düzenlerken mevcut fotoğraflar (sadece gösterim)
   const [toastMsg, setToastMsg] = useState('');
 
   const photoUrl = (p) => (p && p.startsWith('http') ? p : `${API_URL}${p}`);
+  const formatPrice = (n) => new Intl.NumberFormat('tr-TR').format(Number(n)) + ' TL';
 
   // Sayfa yüklendiğinde token var mı kontrol et
   useEffect(() => {
     const savedToken = localStorage.getItem('bm_token');
-    if (savedToken) {
-      setToken(savedToken);
-    }
+    if (savedToken) setToken(savedToken);
   }, []);
 
   // Token değiştiğinde (girişten sonra) ilanları çek
@@ -79,7 +83,7 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     setTimeout(() => setToastMsg(''), 2600);
   };
 
-  // --- GİRİŞ İŞLEMİ (BACKEND'E İSTEK) ---
+  // --- GİRİŞ ---
   const tryLogin = async () => {
     try {
       setLoginErr('');
@@ -87,7 +91,6 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
         username: loginUser,
         password: loginPass
       });
-
       const receivedToken = res.data.token;
       localStorage.setItem('bm_token', receivedToken);
       setToken(receivedToken);
@@ -102,7 +105,7 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     setToken(null);
   };
 
-  // --- FOTOĞRAF SEÇİMİ (gerçek dosyaları saklıyoruz, önizleme için object URL kullanıyoruz) ---
+  // --- FOTOĞRAF SEÇİMİ ---
   const handlePhotoSelect = (e) => {
     const files = Array.from(e.target.files);
     setPendingPhotos(prev => [...prev, ...files]);
@@ -113,20 +116,15 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     setPendingPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const formatPrice = (n) => new Intl.NumberFormat('tr-TR').format(Number(n)) + ' TL';
+  // --- FİYAT FORMATLAMA ---
   const handlePriceChange = (e) => {
-  // Sadece rakamları al (harf ve diğer işaretleri engelle)
-  const rawValue = e.target.value.replace(/\D/g, '');
-  
-  if (!rawValue) {
-    setPrice('');
-    return;
-  }
-
-  // Sayıyı tr-TR formatında (binlik ayraçlı) biçimlendir
-  const formattedValue = new Intl.NumberFormat('tr-TR').format(rawValue);
-  setPrice(formattedValue);
-};
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setPrice('');
+      return;
+    }
+    setPrice(new Intl.NumberFormat('tr-TR').format(rawValue));
+  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -138,20 +136,15 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     setRooms('');
     setLocation('');
     setFloor('');
-    setBuildingAge(''); 
-    setDetails({
-  grossSize: '', bathroomCount: '', totalFloors: '', tapuDurumu: '', paylasimliIlan: '',
-  gorintuluArama: '', isinmaTipi: '', krediUygun: '', konutSekli: '', esyali: '',
-  yakitTipi: '', yapiTipi: '', yapininDurumu: '', kullanimDurumu: '', yetkiliOfis: '',
-  takas: '', cepheSecenekleri: '', kiraGetirisi: '', eidsOnayli: '', extraNotes: ''
-});
+    setBuildingAge('');
+    setDetails(EMPTY_DETAILS);
     setDesc('');
     setPendingPhotos([]);
     setExistingPhotos([]);
     setCoverKey(null);
   };
 
-  // --- İLANI KAYDET (yeni ekle ya da güncelle) ---
+  // --- İLANI KAYDET ---
   const submitListing = async () => {
     if (!title || !price) {
       showToast('Başlık ve fiyat zorunludur.');
@@ -171,11 +164,12 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
       formData.append('desc', desc);
       Object.entries(details).forEach(([k, v]) => formData.append(k, v));
       pendingPhotos.forEach(file => formData.append('photos', file));
+
       if (coverKey && coverKey.startsWith('pending-')) {
-  formData.append('coverIndex', coverKey.split('-')[1]);
-} else if (coverKey) {
-  formData.append('coverExistingUrl', coverKey);
-}
+        formData.append('coverIndex', coverKey.split('-')[1]);
+      } else if (coverKey) {
+        formData.append('coverExistingUrl', coverKey);
+      }
 
       const url = editingId ? `${API_URL}/api/listings/${editingId}` : `${API_URL}/api/listings`;
       const method = editingId ? 'put' : 'post';
@@ -208,19 +202,19 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     setFloor(l.floor || '');
     setBuildingAge(l.buildingAge || '');
     setDetails({
-  grossSize: l.grossSize || '', bathroomCount: l.bathroomCount || '', totalFloors: l.totalFloors || '',
-  tapuDurumu: l.tapuDurumu || '', paylasimliIlan: l.paylasimliIlan || '', gorintuluArama: l.gorintuluArama || '',
-  isinmaTipi: l.isinmaTipi || '', krediUygun: l.krediUygun || '', konutSekli: l.konutSekli || '',
-  esyali: l.esyali || '', yakitTipi: l.yakitTipi || '', yapiTipi: l.yapiTipi || '',
-  yapininDurumu: l.yapininDurumu || '', kullanimDurumu: l.kullanimDurumu || '', yetkiliOfis: l.yetkiliOfis || '',
-  takas: l.takas || '', cepheSecenekleri: l.cepheSecenekleri || '', kiraGetirisi: l.kiraGetirisi || '',
-  eidsOnayli: l.eidsOnayli || '', extraNotes: l.extraNotes || ''
-});
+      grossSize: l.grossSize || '', bathroomCount: l.bathroomCount || '', totalFloors: l.totalFloors || '',
+      tapuDurumu: l.tapuDurumu || '', paylasimliIlan: l.paylasimliIlan || '', gorintuluArama: l.gorintuluArama || '',
+      isinmaTipi: l.isinmaTipi || '', krediUygun: l.krediUygun || '', konutSekli: l.konutSekli || '',
+      esyali: l.esyali || '', yakitTipi: l.yakitTipi || '', yapiTipi: l.yapiTipi || '',
+      yapininDurumu: l.yapininDurumu || '', kullanimDurumu: l.kullanimDurumu || '', yetkiliOfis: l.yetkiliOfis || '',
+      takas: l.takas || '', cepheSecenekleri: l.cepheSecenekleri || '', kiraGetirisi: l.kiraGetirisi || '',
+      eidsOnayli: l.eidsOnayli || '', extraNotes: l.extraNotes || ''
+    });
     setDesc(l.description || l.desc || '');
     setPendingPhotos([]);
     setExistingPhotos(l.photos || []);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
     setCoverKey(l.photos && l.photos.length ? l.photos[0] : null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // --- İLAN SİL ---
@@ -238,7 +232,7 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     }
   };
 
-  // Eğer token yoksa (Giriş Yapılmamışsa) Login Ekranını Göster
+  // --- GİRİŞ EKRANI ---
   if (!token) {
     return (
       <div className="overlay" style={{ backgroundColor: 'var(--bg)' }}>
@@ -263,7 +257,13 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
     );
   }
 
-  // Eğer token varsa (Giriş Yapılmışsa) Yönetici Panelini Göster
+  const coverBtnStyle = (active) => ({
+    position: 'absolute', bottom: 4, left: 4, right: 4, fontSize: '11px', padding: '2px 4px',
+    background: active ? 'var(--gold)' : 'rgba(0,0,0,0.6)', color: active ? '#000' : '#fff',
+    border: 'none', borderRadius: '2px', cursor: 'pointer'
+  });
+
+  // --- ADMİN PANELİ ---
   return (
     <div id="admin-view" style={{ minHeight: '100vh', paddingTop: '100px', backgroundColor: 'var(--bg)' }}>
       <header className="scrolled">
@@ -283,28 +283,27 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
         </div>
       </div>
 
-      {/* admin-wrap kısmına form alanını (sol tarafı) genişletecek bir grid yapısı ekliyoruz */}
       <div className="admin-wrap" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '40px', alignItems: 'start' }}>
-        
-        {/* SOL TARAF: İLAN EKLEME FORMU */}
+
+        {/* SOL TARAF: İLAN FORMU */}
         <div className="admin-panel">
           <h3>{editingId ? 'İlanı Düzenle' : 'Yeni İlan Ekle'}</h3>
-          
+
           <div className="field">
             <label>İlan Başlığı</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="örn. Bahçeli Müstakil Ev" />
           </div>
-          
+
           <div className="field-row">
             <div className="field">
               <label>Kategori</label>
               <select value={category} onChange={e => setCategory(e.target.value)}>
                 <option>Daire</option>
                 <option>Villa</option>
+                <option value="Apart">Apart</option>
                 <option>Müstakil Ev</option>
                 <option>Arsa</option>
                 <option>İşyeri</option>
-                <option value="Apart">Apart</option>
               </select>
             </div>
             <div className="field">
@@ -315,18 +314,17 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
               </select>
             </div>
           </div>
-          
+
           <div className="field-row">
             <div className="field">
               <label>Fiyat (TL)</label>
               <input type="text" value={price} onChange={handlePriceChange} placeholder="2.500.000" />
             </div>
             <div className="field">
-              <label>m²</label>
+              <label>m² (Net)</label>
               <input type="number" value={size} onChange={e => setSize(e.target.value)} placeholder="145" />
             </div>
           </div>
-          
 
           <div className="field-row">
             <div className="field">
@@ -337,7 +335,23 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
               <label>Bina Yaşı</label>
               <input type="text" value={buildingAge} onChange={e => setBuildingAge(e.target.value)} placeholder="örn. Sıfır, 5-10 Yıl" />
             </div>
-          </div> {/* DİKKAT: Eksik olan kapanış div'i buraya eklendi */}
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Oda Sayısı</label>
+              <input type="text" value={rooms} onChange={e => setRooms(e.target.value)} placeholder="3+1 (opsiyonel)" />
+            </div>
+            <div className="field">
+              <label>Mahalle</label>
+              <select value={location} onChange={e => setLocation(e.target.value)}>
+                <option value="">Mahalle seçin</option>
+                {KARAMAN_MAHALLELERI.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <div className="field-row">
             <div className="field">
@@ -352,177 +366,139 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
               <input type="number" value={details.bathroomCount} onChange={e => setDetail('bathroomCount', e.target.value)} placeholder="1" />
             </div>
           </div>
+
           <div className="field-row">
             <div className="field">
-              <label>Oda Sayısı</label>
-              <input type="text" value={rooms} onChange={e => setRooms(e.target.value)} placeholder="3+1 (opsiyonel)" />
+              <label>Brüt m²</label>
+              <input type="number" value={details.grossSize} onChange={e => setDetail('grossSize', e.target.value)} placeholder="158" />
             </div>
             <div className="field">
-              <label>Konum</label>
-              <select value={location} onChange={e => setLocation(e.target.value)}>
-  <option value="">Mahalle seçin</option>
-  {KARAMAN_MAHALLELERI.map(m => (
-    <option key={m} value={m}>{m}</option>
-  ))}
-</select>
+              <label>Binadaki Kat Sayısı</label>
+              <input type="number" value={details.totalFloors} onChange={e => setDetail('totalFloors', e.target.value)} placeholder="3" />
             </div>
           </div>
 
           <div className="field-row">
-  <div className="field">
-    <label>Bulunduğu Kat</label>
-    <input 
-      type="text" 
-      value={floor} 
-      onChange={e => setFloor(e.target.value)} 
-      placeholder="örn. 3. Kat, Giriş Kat" 
-    />
-  </div>
-  <div className="field">
-    <label>Bina Yaşı</label>
-    <input 
-      type="text" 
-      value={buildingAge} 
-      onChange={e => setBuildingAge(e.target.value)} 
-      placeholder="örn. Sıfır, 5-10 Yıl" 
-    />
-  </div>
-  <div className="field-row">
-  <div className="field">
-    <label>Tapu Durumu</label>
-    <select value={details.tapuDurumu} onChange={e => setDetail('tapuDurumu', e.target.value)}>
-      <option value="">Seçiniz</option>
-      <option>Kat Mülkiyeti</option><option>Kat İrtifakı</option><option>Arsa Tapulu</option><option>Hisseli Tapu</option><option>Müstakil Tapulu</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Banyo Sayısı</label>
-    <input type="number" value={details.bathroomCount} onChange={e => setDetail('bathroomCount', e.target.value)} placeholder="1" />
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Brüt m²</label>
-    <input type="number" value={details.grossSize} onChange={e => setDetail('grossSize', e.target.value)} placeholder="158" />
-  </div>
-  <div className="field">
-    <label>Binadaki Kat Sayısı</label>
-    <input type="number" value={details.totalFloors} onChange={e => setDetail('totalFloors', e.target.value)} placeholder="3" />
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Isınma Tipi</label>
-    <select value={details.isinmaTipi} onChange={e => setDetail('isinmaTipi', e.target.value)}>
-      <option value="">Seçiniz</option>
-      <option>Kombi</option><option>Merkezi</option><option>Yerden Isıtma</option><option>Soba</option><option>Klima</option><option>Isıtma Yok</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Yakıt Tipi</label>
-    <select value={details.yakitTipi} onChange={e => setDetail('yakitTipi', e.target.value)}>
-      <option value="">Seçiniz</option>
-      <option>Doğalgaz</option><option>Elektrik</option><option>Kömür</option><option>Yok</option>
-    </select>
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Yapı Tipi</label>
-    <select value={details.yapiTipi} onChange={e => setDetail('yapiTipi', e.target.value)}>
-      <option value="">Seçiniz</option>
-      <option>Betonarme</option><option>Çelik</option><option>Ahşap</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Yapının Durumu</label>
-    <select value={details.yapininDurumu} onChange={e => setDetail('yapininDurumu', e.target.value)}>
-      <option value="">Seçiniz</option>
-      <option>Sıfır</option><option>İkinci El</option>
-    </select>
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Kullanım Durumu</label>
-    <select value={details.kullanimDurumu} onChange={e => setDetail('kullanimDurumu', e.target.value)}>
-      <option value="">Seçiniz</option>
-      <option>Boş</option><option>Kiracılı</option><option>Mülk Sahibi</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Konut Şekli</label>
-    <input type="text" value={details.konutSekli} onChange={e => setDetail('konutSekli', e.target.value)} placeholder="örn. Daire, Dubleks" />
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Eşyalı mı?</label>
-    <select value={details.esyali} onChange={e => setDetail('esyali', e.target.value)}>
-      <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Krediye Uygun mu?</label>
-    <select value={details.krediUygun} onChange={e => setDetail('krediUygun', e.target.value)}>
-      <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
-    </select>
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Takas</label>
-    <select value={details.takas} onChange={e => setDetail('takas', e.target.value)}>
-      <option value="">Seçiniz</option><option>Yapılır</option><option>Yapılmaz</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Yetkili Ofis mi?</label>
-    <select value={details.yetkiliOfis} onChange={e => setDetail('yetkiliOfis', e.target.value)}>
-      <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
-    </select>
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>Paylaşımlı İlan mı?</label>
-    <select value={details.paylasimliIlan} onChange={e => setDetail('paylasimliIlan', e.target.value)}>
-      <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Görüntülü Arama ile Gezilebilir mi?</label>
-    <select value={details.gorintuluArama} onChange={e => setDetail('gorintuluArama', e.target.value)}>
-      <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
-    </select>
-  </div>
-</div>
-<div className="field-row">
-  <div className="field">
-    <label>EIDS Onaylı mı?</label>
-    <select value={details.eidsOnayli} onChange={e => setDetail('eidsOnayli', e.target.value)}>
-      <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
-    </select>
-  </div>
-  <div className="field">
-    <label>Kira Getirisi (TL)</label>
-    <input type="number" value={details.kiraGetirisi} onChange={e => setDetail('kiraGetirisi', e.target.value)} placeholder="opsiyonel" />
-  </div>
-</div>
-<div className="field">
-  <label>Cephe Seçenekleri</label>
-  <input type="text" value={details.cepheSecenekleri} onChange={e => setDetail('cepheSecenekleri', e.target.value)} placeholder="örn. Güney, Doğu, Batı" />
-</div>
-</div>
+            <div className="field">
+              <label>Isınma Tipi</label>
+              <select value={details.isinmaTipi} onChange={e => setDetail('isinmaTipi', e.target.value)}>
+                <option value="">Seçiniz</option>
+                <option>Kombi</option><option>Merkezi</option><option>Yerden Isıtma</option><option>Soba</option><option>Klima</option><option>Isıtma Yok</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Yakıt Tipi</label>
+              <select value={details.yakitTipi} onChange={e => setDetail('yakitTipi', e.target.value)}>
+                <option value="">Seçiniz</option>
+                <option>Doğalgaz</option><option>Elektrik</option><option>Kömür</option><option>Yok</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Yapı Tipi</label>
+              <select value={details.yapiTipi} onChange={e => setDetail('yapiTipi', e.target.value)}>
+                <option value="">Seçiniz</option>
+                <option>Betonarme</option><option>Çelik</option><option>Ahşap</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Yapının Durumu</label>
+              <select value={details.yapininDurumu} onChange={e => setDetail('yapininDurumu', e.target.value)}>
+                <option value="">Seçiniz</option>
+                <option>Sıfır</option><option>İkinci El</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Kullanım Durumu</label>
+              <select value={details.kullanimDurumu} onChange={e => setDetail('kullanimDurumu', e.target.value)}>
+                <option value="">Seçiniz</option>
+                <option>Boş</option><option>Kiracılı</option><option>Mülk Sahibi</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Konut Şekli</label>
+              <input type="text" value={details.konutSekli} onChange={e => setDetail('konutSekli', e.target.value)} placeholder="örn. Daire, Dubleks" />
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Eşyalı mı?</label>
+              <select value={details.esyali} onChange={e => setDetail('esyali', e.target.value)}>
+                <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Krediye Uygun mu?</label>
+              <select value={details.krediUygun} onChange={e => setDetail('krediUygun', e.target.value)}>
+                <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Takas</label>
+              <select value={details.takas} onChange={e => setDetail('takas', e.target.value)}>
+                <option value="">Seçiniz</option><option>Yapılır</option><option>Yapılmaz</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Yetkili Ofis mi?</label>
+              <select value={details.yetkiliOfis} onChange={e => setDetail('yetkiliOfis', e.target.value)}>
+                <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>Paylaşımlı İlan mı?</label>
+              <select value={details.paylasimliIlan} onChange={e => setDetail('paylasimliIlan', e.target.value)}>
+                <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Görüntülü Arama ile Gezilebilir mi?</label>
+              <select value={details.gorintuluArama} onChange={e => setDetail('gorintuluArama', e.target.value)}>
+                <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="field-row">
+            <div className="field">
+              <label>EIDS Onaylı mı?</label>
+              <select value={details.eidsOnayli} onChange={e => setDetail('eidsOnayli', e.target.value)}>
+                <option value="">Seçiniz</option><option>Evet</option><option>Hayır</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Kira Getirisi (TL)</label>
+              <input type="number" value={details.kiraGetirisi} onChange={e => setDetail('kiraGetirisi', e.target.value)} placeholder="opsiyonel" />
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Cephe Seçenekleri</label>
+            <input type="text" value={details.cepheSecenekleri} onChange={e => setDetail('cepheSecenekleri', e.target.value)} placeholder="örn. Güney, Doğu, Batı" />
+          </div>
+
           <div className="field">
             <label>Açıklama</label>
+            <ReactQuill theme="snow" value={desc} onChange={setDesc} modules={quillModules} />
+          </div>
 
-     <ReactQuill theme="snow" value={desc} onChange={setDesc} modules={quillModules} />         
- </div>
- <div className="field">
-  <label>Ek Açıklamalar (opsiyonel, kısa notlar)</label>
-  <textarea value={details.extraNotes} onChange={e => setDetail('extraNotes', e.target.value)} placeholder="örn. Eşyalar dahildir, acil satılık..."></textarea>
-</div>
+          <div className="field">
+            <label>Ek Açıklamalar (opsiyonel, kısa notlar)</label>
+            <textarea value={details.extraNotes} onChange={e => setDetail('extraNotes', e.target.value)} placeholder="örn. Eşyalar dahildir, acil satılık..."></textarea>
+          </div>
+
           <div className="field">
             <label>Fotoğraflar</label>
             <div className="photo-drop" onClick={() => document.getElementById('f-photos').click()}>
@@ -530,52 +506,32 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
             </div>
             <input type="file" id="f-photos" accept="image/*" multiple className="hidden" onChange={handlePhotoSelect} />
 
-            {existingPhotos.length > 0 && (
+            {(existingPhotos.length > 0 || pendingPhotos.length > 0) && (
               <div className="photo-preview">
-                {(existingPhotos.length > 0 || pendingPhotos.length > 0) && (
-  <div className="photo-preview">
-    {existingPhotos.map((p, i) => (
-      <div key={`existing-${i}`} className="thumb" style={{ position: 'relative', border: coverKey === p ? '2px solid var(--gold)' : 'none' }}>
-        <img src={photoUrl(p)} alt={`Mevcut ${i}`} />
-        <button
-          type="button"
-          onClick={() => setCoverKey(p)}
-          style={{ position: 'absolute', bottom: 4, left: 4, right: 4, fontSize: '11px', padding: '2px 4px', background: coverKey === p ? 'var(--gold)' : 'rgba(0,0,0,0.6)', color: coverKey === p ? '#000' : '#fff', border: 'none', borderRadius: '2px', cursor: 'pointer' }}
-        >
-          {coverKey === p ? '★ Kapak' : 'Kapak Yap'}
-        </button>
-      </div>
-    ))}
-    {pendingPhotos.map((file, i) => {
-      const key = `pending-${i}`;
-      return (
-        <div key={key} className="thumb" style={{ position: 'relative', border: coverKey === key ? '2px solid var(--gold)' : 'none' }}>
-          <img src={URL.createObjectURL(file)} alt={`Yüklenen ${i}`} />
-          <button type="button" onClick={() => removePendingPhoto(i)} style={{ position: 'absolute', top: 2, right: 2 }}>✕</button>
-          <button
-            type="button"
-            onClick={() => setCoverKey(key)}
-            style={{ position: 'absolute', bottom: 4, left: 4, right: 4, fontSize: '11px', padding: '2px 4px', background: coverKey === key ? 'var(--gold)' : 'rgba(0,0,0,0.6)', color: coverKey === key ? '#000' : '#fff', border: 'none', borderRadius: '2px', cursor: 'pointer' }}
-          >
-            {coverKey === key ? '★ Kapak' : 'Kapak Yap'}
-          </button>
-        </div>
-      );
-    })}
-  </div>
-)}
+                {existingPhotos.map((p, i) => (
+                  <div key={`existing-${i}`} className="thumb" style={{ position: 'relative', border: coverKey === p ? '2px solid var(--gold)' : 'none' }}>
+                    <img src={photoUrl(p)} alt={`Mevcut ${i}`} />
+                    <button type="button" onClick={() => setCoverKey(p)} style={coverBtnStyle(coverKey === p)}>
+                      {coverKey === p ? '★ Kapak' : 'Kapak Yap'}
+                    </button>
+                  </div>
+                ))}
+                {pendingPhotos.map((file, i) => {
+                  const key = `pending-${i}`;
+                  return (
+                    <div key={key} className="thumb" style={{ position: 'relative', border: coverKey === key ? '2px solid var(--gold)' : 'none' }}>
+                      <img src={URL.createObjectURL(file)} alt={`Yüklenen ${i}`} />
+                      <button type="button" onClick={() => removePendingPhoto(i)} style={{ position: 'absolute', top: 2, right: 2 }}>✕</button>
+                      <button type="button" onClick={() => setCoverKey(key)} style={coverBtnStyle(coverKey === key)}>
+                        {coverKey === key ? '★ Kapak' : 'Kapak Yap'}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
-
-            <div className="photo-preview">
-              {pendingPhotos.map((file, i) => (
-                <div key={i} className="thumb">
-                  <img src={URL.createObjectURL(file)} alt={`Yüklenen ${i}`} />
-                  <button onClick={() => removePendingPhoto(i)}>✕</button>
-                </div>
-              ))}
-            </div>
           </div>
+
           <button className="admin-submit" onClick={submitListing}>
             {editingId ? 'Değişiklikleri Kaydet' : 'İlanı Yayınla'}
           </button>
@@ -584,7 +540,7 @@ const setDetail = (key, value) => setDetails(d => ({ ...d, [key]: value }));
           )}
         </div>
 
-        {/* SAĞ TARAF: YAYINDAKİ İLANLAR LİSTESİ */}
+        {/* SAĞ TARAF: YAYINDAKİ İLANLAR */}
         <div>
           <h3 style={{ marginBottom: '16px', fontWeight: 500 }}>Yayındaki İlanlar ({listings.length})</h3>
           <div className="admin-list">

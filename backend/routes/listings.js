@@ -47,23 +47,37 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+const DETAIL_FIELDS = [
+  'grossSize', 'bathroomCount', 'totalFloors', 'tapuDurumu', 'paylasimliIlan',
+  'gorintuluArama', 'isinmaTipi', 'krediUygun', 'konutSekli', 'esyali',
+  'yakitTipi', 'yapiTipi', 'yapininDurumu', 'kullanimDurumu', 'yetkiliOfis',
+  'takas', 'cepheSecenekleri', 'kiraGetirisi', 'eidsOnayli', 'extraNotes'
+];
+
 // Admin: yeni ilan ekle
 router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
-  const { title, category, type, price, size, rooms, location, desc } = req.body;
+  const { title, category, type, price, size, rooms, location, desc, floor, buildingAge } = req.body;
+
   if (!title || !category || !type || !price) {
     return res.status(400).json({ error: 'Zorunlu alanlar eksik.' });
   }
 
   try {
+    const detailValues = DETAIL_FIELDS.map(f => req.body[f] || null);
+    const columns = ['title','category','type','price','size','rooms','location','description','floor','buildingAge', ...DETAIL_FIELDS];
+    const placeholders = columns.map(() => '?').join(',');
+    const values = [title, category, type, price, size || null, rooms || null, location || null, desc || null, floor || null, buildingAge || null, ...detailValues];
+
     const [result] = await db.query(
-      'INSERT INTO listings (title, category, type, price, size, rooms, location, description) VALUES (?,?,?,?,?,?,?,?)',
-      [title, category, type, price, size || null, rooms || null, location || null, desc || null]
+      `INSERT INTO listings (${columns.join(',')}) VALUES (${placeholders})`,
+      values
     );
     const listingId = result.insertId;
 
     if (req.files && req.files.length) {
-      const values = req.files.map((f, i) => [listingId, f.path, i]);
-      await db.query('INSERT INTO listing_photos (listing_id, url, sort_order) VALUES ?', [values]);
+      const coverIdx = req.body.coverIndex !== undefined ? parseInt(req.body.coverIndex, 10) : null;
+      const photoValues = req.files.map((f, i) => [listingId, f.path, (coverIdx !== null && i === coverIdx) ? -1 : i]);
+      await db.query('INSERT INTO listing_photos (listing_id, url, sort_order) VALUES ?', [photoValues]);
     }
 
     res.status(201).json({ id: listingId, message: 'İlan eklendi.' });
@@ -75,17 +89,24 @@ router.post('/', verifyToken, upload.array('photos', 10), async (req, res) => {
 
 // Admin: ilan güncelle
 router.put('/:id', verifyToken, upload.array('photos', 10), async (req, res) => {
-  const { title, category, type, price, size, rooms, location, desc } = req.body;
+  const { title, category, type, price, size, rooms, location, desc, floor, buildingAge } = req.body;
 
   try {
-    await db.query(
-      'UPDATE listings SET title=?, category=?, type=?, price=?, size=?, rooms=?, location=?, description=? WHERE id=?',
-      [title, category, type, price, size || null, rooms || null, location || null, desc || null, req.params.id]
-    );
+    const detailValues = DETAIL_FIELDS.map(f => req.body[f] || null);
+    const columns = ['title','category','type','price','size','rooms','location','description','floor','buildingAge', ...DETAIL_FIELDS];
+    const setClause = columns.map(c => `${c}=?`).join(',');
+    const values = [title, category, type, price, size || null, rooms || null, location || null, desc || null, floor || null, buildingAge || null, ...detailValues, req.params.id];
+
+    await db.query(`UPDATE listings SET ${setClause} WHERE id=?`, values);
 
     if (req.files && req.files.length) {
-      const values = req.files.map((f, i) => [req.params.id, f.path, i]);
-      await db.query('INSERT INTO listing_photos (listing_id, url, sort_order) VALUES ?', [values]);
+      const coverIdx = req.body.coverIndex !== undefined ? parseInt(req.body.coverIndex, 10) : null;
+      const photoValues = req.files.map((f, i) => [req.params.id, f.path, (coverIdx !== null && i === coverIdx) ? -1 : i]);
+      await db.query('INSERT INTO listing_photos (listing_id, url, sort_order) VALUES ?', [photoValues]);
+    }
+
+    if (req.body.coverExistingUrl) {
+      await db.query('UPDATE listing_photos SET sort_order = -1 WHERE listing_id = ? AND url = ?', [req.params.id, req.body.coverExistingUrl]);
     }
 
     res.json({ message: 'İlan güncellendi.' });
@@ -94,16 +115,26 @@ router.put('/:id', verifyToken, upload.array('photos', 10), async (req, res) => 
     res.status(500).json({ error: 'İlan güncellenemedi.' });
   }
 });
-
-// Admin: ilan sil
+// Admin: İlan sil
 router.delete('/:id', verifyToken, async (req, res) => {
   try {
-    await db.query('DELETE FROM listings WHERE id = ?', [req.params.id]);
-    res.json({ message: 'İlan silindi.' });
+    const listingId = req.params.id;
+
+    // 1. Önce ilana ait fotoğrafları veritabanından silin (Eğer ON DELETE CASCADE ayarlı değilse)
+    await db.query('DELETE FROM listing_photos WHERE listing_id = ?', [listingId]);
+
+    // 2. Ardından ilanı silin
+    const [result] = await db.query('DELETE FROM listings WHERE id = ?', [listingId]);
+
+    // Eğer silinecek kayıt bulunamadıysa (affectedRows 0 ise)
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Silinmek istenen ilan bulunamadı.' });
+    }
+
+    res.json({ message: 'İlan başarıyla silindi.' });
   } catch (err) {
     console.error('HATA DETAY (DELETE /listings/:id):', err && err.message, err);
-    res.status(500).json({ error: 'İlan silinemedi.' });
+    res.status(500).json({ error: 'İlan silinirken bir hata oluştu.' });
   }
 });
-
 module.exports = router;

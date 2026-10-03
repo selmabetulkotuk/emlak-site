@@ -156,14 +156,14 @@ footer .flinks a:hover{color:var(--gold-light);}
 }
 .modal{
   background:var(--panel); border:1px solid var(--border); border-radius:4px;
-  max-width:920px; width:100%; max-height:88vh; overflow-y:auto; position:relative;
+  max-width:1300px; width:95vw; max-height:94vh; overflow-y:auto; position:relative;
 }
 .modal-close{
   position:absolute; top:16px; right:16px; z-index:5; width:38px; height:38px;
   background:rgba(11,11,13,0.7); border:1px solid var(--border); border-radius:50%;
   display:flex; align-items:center; justify-content:center; color:var(--text); font-size:1.1rem;
 }
-.modal-gallery{position:relative; height:380px; background:var(--panel-2);}
+.modal-gallery{position:relative; height:480px; background:var(--panel-2);}
 .modal-gallery img{width:100%; height:100%; object-fit:cover; display:block;}
 .gallery-dots{position:absolute; bottom:16px; left:0; right:0; display:flex; justify-content:center; gap:8px;}
 .gallery-dots span{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.35); cursor:pointer;}
@@ -179,7 +179,7 @@ footer .flinks a:hover{color:var(--gold-light);}
 .spec-row{display:flex; gap:28px; flex-wrap:wrap; margin-bottom:24px; padding:18px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
 .spec-row div{font-size:0.85rem; color:var(--text-dim);}
 .spec-row span{display:block; color:var(--text); font-size:1rem; margin-top:3px; font-family:'Fraunces',serif;}
-.modal-body .desc{color:var(--text-dim); font-size:0.95rem; line-height:1.75;}
+.modal-body .desc{color:var(--text-dim); font-size:0.95rem; line-height:1.75; white-space:pre-line;}
 
 @media (max-width: 860px){
   nav.links{position:fixed; top:0; right:0; bottom:0; width:78%; max-width:320px; background:var(--panel); flex-direction:column; align-items:flex-start; padding:100px 30px; gap:26px; transform:translateX(100%); transition:transform 0.3s; border-left:1px solid var(--border);}

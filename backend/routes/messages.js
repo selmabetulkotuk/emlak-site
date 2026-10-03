@@ -8,25 +8,30 @@ require('dotenv').config();
 // Herkese açık: iletişim formundan mesaj gönder
 router.post('/', async (req, res) => {
   const { name, email, phone, message } = req.body;
-  if (!name || !phone) {
-    return res.status(400).json({ error: 'Ad soyad ve telefon numarası zorunludur.' });
+  if (!name || !phone && !email) {
+    return res.status(400).json({ error: 'Size ulaşabilmemiz için telefon veya e-posta girmelisiniz.' });
   }
 
   try {
+    // 1. Önce veritabanına kaydet
     await db.query('INSERT INTO messages (name, email, phone, message) VALUES (?, ?, ?, ?)', [name, email || null, phone, message || 'Telefonla geri arama talebi']);
 
-    transporter.sendMail({
+    // 2. MAİL GÖNDERİMİNİ BEKLE (await eklendi)
+    await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_TO || process.env.EMAIL_USER,
       replyTo: email || undefined,
       subject: `Yeni İletişim Talebi - ${name}`,
       text: `İsim: ${name}\nTelefon: ${phone}\nE-posta: ${email || 'belirtilmedi'}\n\nMesaj:\n${message || 'Telefonla geri arama talebi'}`
-    }).catch(err => console.error('E-posta gönderilemedi:', err.message));
+    });
 
-    res.status(201).json({ message: 'Talebiniz alındı.' });
+    // 3. Eğer üstteki await hata fırlatmazsa, yani mail giderse başarılı yanıt dön
+    res.status(201).json({ message: 'Talebiniz alındı ve e-posta gönderildi.' });
+
   } catch (err) {
     console.error('HATA DETAY (POST /messages):', err && err.message, err);
-    res.status(500).json({ error: 'Mesaj gönderilemedi.' });
+    // Hata durumunda frontend'e bilgi ver
+    res.status(500).json({ error: 'Mesaj gönderilirken bir hata oluştu.' });
   }
 });
 // Admin: gelen mesajları listele

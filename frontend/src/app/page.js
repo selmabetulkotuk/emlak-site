@@ -25,6 +25,7 @@ const [contactStatus, setContactStatus] = useState('');
 const [callName, setCallName] = useState('');
 const [callPhone, setCallPhone] = useState('');
 const [callStatus, setCallStatus] = useState('');
+const [lightbox, setLightbox] = useState(false);
 
 const requestCall = async (e) => {
   e.preventDefault();
@@ -236,7 +237,7 @@ const sendMessage = async (e) => {
             <option value="Müstakil Ev">Müstakil Ev</option>
             <option value="Arsa">Arsa</option>
             <option value="İşyeri">İşyeri</option>
-            <option value="İşyeri">Apart</option>
+            <option value="Apart">Apart</option>
 
           </select>
           <select value={type} onChange={e => setType(e.target.value)}>
@@ -335,13 +336,32 @@ const sendMessage = async (e) => {
       {/* DETAY MODALI (Açılır Pencere) */}
       {selectedListing && (
         <div className="overlay" onClick={(e) => e.target.className === 'overlay' && setSelectedListing(null)}>
+          {lightbox && (
+  <div
+    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.96)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    onClick={() => setLightbox(false)}
+  >
+    <button onClick={() => setLightbox(false)} style={{ position: 'absolute', top: 20, right: 20, width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border)', color: '#fff', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+    {selectedListing.photos.length > 1 && (
+      <>
+        <button onClick={(e) => { e.stopPropagation(); setPhotoIndex((p) => (p - 1 + selectedListing.photos.length) % selectedListing.photos.length); }} style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border)', color: '#fff', fontSize: '1.4rem', cursor: 'pointer' }}>‹</button>
+        <button onClick={(e) => { e.stopPropagation(); setPhotoIndex((p) => (p + 1) % selectedListing.photos.length); }} style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border)', color: '#fff', fontSize: '1.4rem', cursor: 'pointer' }}>›</button>
+      </>
+    )}
+    <img
+      src={photoUrl(selectedListing.photos[photoIndex])}
+      alt="Tam ekran görsel"
+      onClick={(e) => e.stopPropagation()}
+      style={{ maxWidth: '95vw', maxHeight: '95vh', objectFit: 'contain' }}
+    />
+  </div>
+)}
           <div className="modal">
             <button className="modal-close" onClick={() => setSelectedListing(null)}>✕</button>
             <div className="modal-gallery">
               {selectedListing.photos?.length ? (
                 <>
-                  <img src={photoUrl(selectedListing.photos[photoIndex])} alt="Görsel" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  {selectedListing.photos.length > 1 && (
+            <img src={photoUrl(selectedListing.photos[photoIndex])} alt="Görsel" onClick={() => setLightbox(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }} />                  {selectedListing.photos.length > 1 && (
                     <>
                       <button className="gallery-nav prev" onClick={() => setPhotoIndex((prev) => (prev - 1 + selectedListing.photos.length) % selectedListing.photos.length)}>‹</button>
                       <button className="gallery-nav next" onClick={() => setPhotoIndex((prev) => (prev + 1) % selectedListing.photos.length)}>›</button>
@@ -365,12 +385,52 @@ const sendMessage = async (e) => {
               <h2>{selectedListing.title}</h2>
               <div className="loc">📍 {selectedListing.location}</div>
               <div className="price-row"><span className="price">{formatPrice(selectedListing.price)}</span></div>
-              <div className="spec-row">
-                {selectedListing.size && <div>Metrekare<span>{selectedListing.size} m²</span></div>}
-                {selectedListing.rooms && <div>Oda Sayısı<span>{selectedListing.rooms}</span></div>}
-                <div>Kategori<span>{selectedListing.category}</span></div>
-              </div>
-              <p className="desc">{selectedListing.desc || 'Bu ilan için henüz açıklama eklenmemiş.'}</p>
+             <div className="badges-row" style={{ marginTop: '-6px', marginBottom: '20px', fontSize: '0.82rem', color: 'var(--text-dim)', flexWrap: 'wrap', gap: '6px 14px' }}>
+  <span>{selectedListing.type} {selectedListing.category}</span>
+  {selectedListing.size && <span>· {selectedListing.size} m²</span>}
+  {selectedListing.rooms && <span>· {selectedListing.rooms}</span>}
+  {selectedListing.buildingAge && <span>· {selectedListing.buildingAge} Yaşında</span>}
+  {selectedListing.eidsOnayli === 'Evet' && <span style={{ color: 'var(--gold)' }}>· ✓ EIDS Onaylı</span>}
+</div>
+
+<h4 style={{ marginBottom: '14px', fontWeight: 500 }}>İlan Bilgileri</h4>
+<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+  {[
+    ['Tapu Durumu', selectedListing.tapuDurumu],
+    ['Paylaşımlı İlan', selectedListing.paylasimliIlan],
+    ['Görüntülü Arama', selectedListing.gorintuluArama],
+    ['Oda Sayısı', selectedListing.rooms],
+    ['Banyo Sayısı', selectedListing.bathroomCount],
+    ['Brüt / Net m²', (selectedListing.grossSize || selectedListing.size) ? `${selectedListing.grossSize || '-'} / ${selectedListing.size || '-'}` : null],
+    ['Isınma Tipi', selectedListing.isinmaTipi],
+    ['Binanın Yaşı', selectedListing.buildingAge],
+    ['Bulunduğu Kat', selectedListing.floor],
+    ['Binadaki Kat Sayısı', selectedListing.totalFloors],
+    ['Krediye Uygun mu?', selectedListing.krediUygun],
+    ['Konut Şekli', selectedListing.konutSekli || selectedListing.category],
+    ['Eşyalı', selectedListing.esyali],
+    ['Yakıt Tipi', selectedListing.yakitTipi],
+    ['Yapı Tipi', selectedListing.yapiTipi],
+    ['Yapının Durumu', selectedListing.yapininDurumu],
+    ['Kullanım Durumu', selectedListing.kullanimDurumu],
+    ['Yetkili Ofis', selectedListing.yetkiliOfis],
+    ['Takas', selectedListing.takas],
+    ['Cephe Seçenekleri', selectedListing.cepheSecenekleri],
+    ['Kira Getirisi', selectedListing.kiraGetirisi ? formatPrice(selectedListing.kiraGetirisi) : null],
+  ].filter(([, v]) => v).map(([label, value]) => (
+    <div key={label} style={{ fontSize: '0.85rem', color: 'var(--text-dim)', display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: '8px' }}>
+      <span>{label}</span>
+      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{value}</span>
+    </div>
+  ))}
+</div>
+
+{details => null}
+<h4 style={{ marginBottom: '10px', fontWeight: 500 }}>İlan Açıklaması</h4>
+<div className="desc" dangerouslySetInnerHTML={{ __html: selectedListing.desc || 'Bu ilan için henüz açıklama eklenmemiş.' }} />
+{selectedListing.extraNotes && (
+  <p style={{ marginTop: '14px', fontSize: '0.88rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>{selectedListing.extraNotes}</p>
+)}
             </div>
           </div>
         </div>

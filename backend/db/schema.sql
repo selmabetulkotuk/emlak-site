@@ -1,5 +1,4 @@
-CREATE DATABASE IF NOT EXISTS bm_db;
-USE bm_db;
+USE BmGayrimenkul;
 
 CREATE TABLE IF NOT EXISTS admins (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -14,10 +13,10 @@ CREATE TABLE IF NOT EXISTS listings (
   category VARCHAR(50) NOT NULL,
   type VARCHAR(20) NOT NULL,
   price DECIMAL(15,2) NOT NULL,
-  size INT,
-  rooms VARCHAR(20),
-  location VARCHAR(255),
-  description TEXT,
+  size INT NULL,
+  rooms VARCHAR(20) NULL,
+  location VARCHAR(255) NULL,
+  description TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -28,3 +27,26 @@ CREATE TABLE IF NOT EXISTS listing_photos (
   sort_order INT DEFAULT 0,
   FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+USE BmGayrimenkul;
+
+ALTER TABLE listings MODIFY location VARCHAR(255) NULL;
+ALTER TABLE listings MODIFY rooms VARCHAR(20) NULL;
+ALTER TABLE listings MODIFY size INT NULL;
+ALTER TABLE listings MODIFY description TEXT NULL;
+
+ALTER TABLE messages ADD COLUMN phone VARCHAR(30) NULL;
+ALTER TABLE messages MODIFY email VARCHAR(255) NULL;
+
+ALTER TABLE listings 
+ADD COLUMN floor VARCHAR(100) NULL,
+ADD COLUMN buildingAge VARCHAR(100) NULL;
+
+DESCRIBE listings;

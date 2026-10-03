@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-const transporter = require('../config/mailer');
+const resend = require('../config/mailer');
 const verifyToken = require('../middleware/auth');
 require('dotenv').config();
 
@@ -17,13 +17,13 @@ router.post('/', async (req, res) => {
     await db.query('INSERT INTO messages (name, email, phone, message) VALUES (?, ?, ?, ?)', [name, email || null, phone, message || 'Telefonla geri arama talebi']);
 
     // 2. MAİL GÖNDERİMİNİ BEKLE (await eklendi)
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_TO || process.env.EMAIL_USER,
-      replyTo: email || undefined,
-      subject: `Yeni İletişim Talebi - ${name}`,
-      text: `İsim: ${name}\nTelefon: ${phone}\nE-posta: ${email || 'belirtilmedi'}\n\nMesaj:\n${message || 'Telefonla geri arama talebi'}`
-    });
+    resend.emails.send({
+  from: 'BM Gayrimenkul <onboarding@resend.dev>',
+  to: process.env.EMAIL_TO,
+  reply_to: email || undefined,
+  subject: `Yeni İletişim Talebi - ${name}`,
+  text: `İsim: ${name}\nTelefon: ${phone || 'belirtilmedi'}\nE-posta: ${email || 'belirtilmedi'}\n\nMesaj:\n${message || 'Telefonla geri arama talebi'}`
+}).catch(err => console.error('E-posta gönderilemedi:', err.message));
 
     // 3. Eğer üstteki await hata fırlatmazsa, yani mail giderse başarılı yanıt dön
     res.status(201).json({ message: 'Talebiniz alındı ve e-posta gönderildi.' });
